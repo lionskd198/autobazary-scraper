@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: autobazary-db
+    environment:
+      POSTGRES_USER: autobazary
+      POSTGRES_PASSWORD: autobazary
+      POSTGRES_DB: autobazary
+    ports:
+      # host 5433 -> kontejner 5432 (5432 na hostiteli bývá obsazený lokálním PG)
+      - "5433:5432"
+    volumes:
+      - autobazary_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autobazary"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  autobazary_pgdata:
