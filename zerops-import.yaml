@@ -1,0 +1,12 @@
+# Vlož do Zerops GUI → Projects → (tvůj projekt) → Import services
+# NEPŘIDÁVÁ nový Postgres – napojí se na existující "postgresql" service.
+
+project:
+  name: autobazary-scraper
+
+services:
+  - hostname: scraper
+    type: python@3.12
+    minContainers: 1
+    maxContainers: 1
+    buildFromGit: https://github.com/lionskd198/autobazary-scraper@main

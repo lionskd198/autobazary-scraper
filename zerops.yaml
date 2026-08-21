@@ -1,0 +1,33 @@
+zerops:
+  - setup: scraper
+    build:
+      base: python@3.12
+      addToRunPrepare:
+        - requirements.txt
+      deployFiles:
+        - autobazary/
+        - migrate_add_price_history.py
+        - requirements.txt
+
+    run:
+      base: python@3.12
+      os: alpine
+
+      prepareCommands:
+        - |
+          sudo apk add --no-cache gcc musl-dev libffi-dev
+          pip install --no-cache-dir -r /home/zerops/requirements.txt
+
+      initCommands:
+        - cd /var/www && python migrate_add_price_history.py
+
+      envVariables:
+        # postgresql = hostname existující PostgreSQL služby v projektu
+        DATABASE_URL: postgresql+psycopg://${postgresql_user}:${postgresql_password}@${postgresql_host}:${postgresql_port}/${postgresql_database}
+        SCRAPE_DELAY: "2"
+        SCRAPE_MAX_PAGES: "5"
+        SCRAPE_DETAIL: "false"
+
+      crontab:
+        - command: cd /var/www && python -m autobazary.run scrape --sources all --pages 5
+          timing: "0 * * * *"
