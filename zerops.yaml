@@ -19,23 +19,7 @@ zerops:
           pip install --no-cache-dir -r /home/zerops/requirements.txt
 
       initCommands:
-        - |
-          echo "=== DB ENV VARS ==="
-          echo "hostname: ${postgresql_hostname}"
-          echo "port: ${postgresql_port}"
-          echo "user: ${postgresql_user}"
-          echo "dbName: ${postgresql_dbName}"
-          echo "connectionString: ${postgresql_connectionString}"
-          echo "DATABASE_URL: $DATABASE_URL"
-          echo "==================="
-          cd /var/www
-          python migrate_add_price_history.py
-
-      envVariables:
-        DATABASE_URL: postgresql+psycopg://${postgresql_user}:${postgresql_password}@${postgresql_hostname}:${postgresql_port}/${postgresql_dbName}?sslmode=disable
-        SCRAPE_DELAY: "2"
-        SCRAPE_MAX_PAGES: "5"
-        SCRAPE_DETAIL: "false"
+        - cd /var/www && python migrate_add_price_history.py
 
       crontab:
         - command: cd /var/www && python -m autobazary.run scrape --sources all --pages 5
