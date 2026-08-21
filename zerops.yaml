@@ -19,11 +19,14 @@ zerops:
           pip install --no-cache-dir -r /home/zerops/requirements.txt
 
       initCommands:
-        - cd /var/www && python migrate_add_price_history.py
+        - |
+          cd /var/www
+          python migrate_add_price_history.py
 
       envVariables:
-        # postgresql = hostname existující PostgreSQL služby v projektu
-        DATABASE_URL: postgresql+psycopg://${postgresql_user}:${postgresql_password}@${postgresql_host}:${postgresql_port}/${postgresql_database}
+        # postgresql_connectionString je ve tvaru postgresql://user:pass@host:port/db
+        # psycopg3 potřebuje postgresql+psycopg:// – nahradíme prefix
+        DATABASE_URL: ${postgresql_connectionString}
         SCRAPE_DELAY: "2"
         SCRAPE_MAX_PAGES: "5"
         SCRAPE_DETAIL: "false"

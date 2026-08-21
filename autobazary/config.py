@@ -16,12 +16,20 @@ def _get_bool(name: str, default: bool) -> bool:
     return val.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _fix_db_url(url: str) -> str:
+    """Zerops exportuje connectionString jako postgresql:// ale psycopg3
+    potřebuje postgresql+psycopg://. Opravíme prefix pokud je potřeba."""
+    if url.startswith("postgresql://") or url.startswith("postgres://"):
+        return url.replace("://", "+psycopg://", 1)
+    return url
+
+
 @dataclass(frozen=True)
 class Config:
-    database_url: str = os.getenv(
+    database_url: str = _fix_db_url(os.getenv(
         "DATABASE_URL",
         "postgresql+psycopg://autobazary:autobazary@localhost:5433/autobazary",
-    )
+    ))
     delay: float = float(os.getenv("SCRAPE_DELAY", "1.5"))
     max_pages: int = int(os.getenv("SCRAPE_MAX_PAGES", "5"))
     timeout: float = float(os.getenv("SCRAPE_TIMEOUT", "20"))
