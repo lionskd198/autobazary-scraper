@@ -1,0 +1,19 @@
+name: Deploy to Zerops
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install zcli
+        run: npm install -g @zerops/zcli
+
+      - name: Deploy to Zerops
+        env:
+          ZEROPS_TOKEN: ${{ secrets.ZEROPS_TOKEN }}
+        run: zcli push --service-id Soce5hfSR4ifUSHxkElU9Q
