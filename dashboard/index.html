@@ -411,7 +411,7 @@ const FEAT_LABELS = {
 function renderCards(items) {
   const grid = document.getElementById("cards");
   if (!items.length) {
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="ti ti-mood-sad"></i>Žádné inzeráty neodpovídají filtrům</div>';
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="ti ti-mood-sad"></i><br>Žádné inzeráty neodpovídají filtrům</div>';
     return;
   }
 
@@ -419,60 +419,62 @@ function renderCards(items) {
     const days = c.days_listed;
     const [ageCls, agePill] = daysLabel(days) || ["", ""];
     const cardCls = days <= 7 ? "fresh" : days <= 29 ? "aging" : "stale";
+    const isFav = favorites.has(c.id);
 
-    // Cena a změna
-    let priceHtml = `<span class="price">${c.price ? fmtN(c.price) + " Kč" : "Cena dohodou"}</span>`;
+    let priceHtml = '<span class="price">' + (c.price ? fmtN(c.price) + " Kč" : "Cena dohodou") + '</span>';
     if (c.prev_price != null && c.prev_price !== c.price) {
       const dir = c.prev_price > c.price ? "price-down" : "price-up";
       const icon = c.prev_price > c.price ? "ti-trending-down" : "ti-trending-up";
-      priceHtml += `<span class="price-prev ${dir}"><i class="ti ${icon}"></i> bylo ${fmtN(c.prev_price)} Kč</span>`;
+      priceHtml += '<span class="price-prev ' + dir + '"><i class="ti ' + icon + '"></i> bylo ' + fmtN(c.prev_price) + ' Kč</span>';
     }
 
-    // Výbava — zobraz jen aktivně filtrované featury
-    const featHtml = [...state.features].map(f => {
-      // Tady bychom potřebovali data z DB — schovat pokud nemáme
-      return `<span class="feat-tag feat-yes">${FEAT_LABELS[f] || f}</span>`;
-    }).join("");
+    const featHtml = [...state.features].map(f =>
+      '<span class="feat-tag feat-yes">' + (FEAT_LABELS[f] || f) + '</span>'
+    ).join("");
 
-    const updatedHtml = c.was_updated
-      ? `<div class="age-updated"><i class="ti ti-refresh"></i> aktualizováno</div>`
-      : "";
+    const updatedHtml = c.was_updated ? '<div class="age-updated"><i class="ti ti-refresh"></i> aktualizováno</div>' : "";
 
-    return `<div class="card ${cardCls}">
-      <div class="card-top">
-        <div class="card-title">${c.title || c.brand + " " + c.model}</div>
-        <span class="src-badge src-${c.source}">${c.source}</span>
-      </div>
-      <div class="price-row">${priceHtml}</div>
-      <div class="attrs">
-        ${c.year ? `<span class="attr"><i class="ti ti-calendar"></i>${c.year}</span>` : ""}
-        ${c.mileage_km != null ? `<span class="attr"><i class="ti ti-road"></i>${fmtN(c.mileage_km)} km</span>` : ""}
-        ${c.fuel ? `<span class="attr"><i class="ti ti-gas-station"></i>${c.fuel}</span>` : ""}
-        ${c.power_kw ? `<span class="attr"><i class="ti ti-bolt"></i>${c.power_kw} kW</span>` : ""}
-        ${c.body_type ? `<span class="attr"><i class="ti ti-car"></i>${c.body_type}</span>` : ""}
-        ${c.location ? `<span class="attr"><i class="ti ti-map-pin"></i>${c.location}</span>` : ""}
-        ${c.seller_type ? `<span class="attr">${c.seller_type === "dealer" ? "Bazár" : "Soukromník"}</span>` : ""}
-      </div>
-      ${featHtml ? `<div class="feats">${featHtml}</div>` : ""}
-      <div class="card-footer">
-        <div class="age-badge">
-          ${agePill ? `<span class="age-pill ${ageCls}">${agePill}</span>` : ""}
-          ${updatedHtml}
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <button class="fav-btn \${favorites.has(c.id) ? 'active' : ''}" onclick="toggleFav(\${c.id}, this)" title="Přidat do oblíbených">
-            <i class="ti \${favorites.has(c.id) ? 'ti-heart-filled' : 'ti-heart'}"></i>
-          </button>
-          <a class="btn-link" href="${c.url}" target="_blank" rel="noopener">
-            <i class="ti ti-external-link"></i> Zobrazit
-          </a>
-        </div>
-      </div>
-    </div>\`;
+    let attrsHtml = "";
+    if (c.year) attrsHtml += '<span class="attr"><i class="ti ti-calendar"></i>' + c.year + '</span>';
+    if (c.mileage_km != null) attrsHtml += '<span class="attr"><i class="ti ti-road"></i>' + fmtN(c.mileage_km) + ' km</span>';
+    if (c.fuel) attrsHtml += '<span class="attr"><i class="ti ti-gas-station"></i>' + c.fuel + '</span>';
+    if (c.power_kw) attrsHtml += '<span class="attr"><i class="ti ti-bolt"></i>' + c.power_kw + ' kW</span>';
+    if (c.body_type) attrsHtml += '<span class="attr"><i class="ti ti-car"></i>' + c.body_type + '</span>';
+    if (c.location) attrsHtml += '<span class="attr"><i class="ti ti-map-pin"></i>' + c.location + '</span>';
+    if (c.seller_type) attrsHtml += '<span class="attr">' + (c.seller_type === "dealer" ? "Bazár" : "Soukromník") + '</span>';
+
+    return '<div class="card ' + cardCls + '" data-id="' + c.id + '">'
+      + '<div class="card-top">'
+        + '<div class="card-title">' + (c.title || c.brand + " " + c.model) + '</div>'
+        + '<span class="src-badge src-' + c.source + '">' + c.source + '</span>'
+      + '</div>'
+      + '<div class="price-row">' + priceHtml + '</div>'
+      + '<div class="attrs">' + attrsHtml + '</div>'
+      + (featHtml ? '<div class="feats">' + featHtml + '</div>' : "")
+      + '<div class="card-footer">'
+        + '<div class="age-badge">'
+          + (agePill ? '<span class="age-pill ' + ageCls + '">' + agePill + '</span>' : "")
+          + updatedHtml
+        + '</div>'
+        + '<div style="display:flex;gap:6px;align-items:center">'
+          + '<button class="fav-btn' + (isFav ? ' active' : '') + '" data-id="' + c.id + '" title="Oblíbené">'
+            + '<i class="ti ' + (isFav ? 'ti-heart-filled' : 'ti-heart') + '"></i>'
+          + '</button>'
+          + '<a class="btn-link" href="' + c.url + '" target="_blank" rel="noopener">'
+            + '<i class="ti ti-external-link"></i> Zobrazit'
+          + '</a>'
+        + '</div>'
+      + '</div>'
+    + '</div>';
   }).join("");
+
+  // Event listenery na srdíčka
+  grid.querySelectorAll(".fav-btn").forEach(btn => {
+    btn.addEventListener("click", () => toggleFav(+btn.dataset.id, btn));
+  });
 }
 
-// ── Paginace ─────────────────────────────────────────────────────────────────
+// ── Paginace// ── Paginace ─────────────────────────────────────────────────────────────────
 function renderPagination(total) {
   const pages = Math.ceil(total / LIMIT);
   const current = Math.floor(offset / LIMIT);
