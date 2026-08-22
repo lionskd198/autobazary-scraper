@@ -74,14 +74,18 @@ class TipCarsScraper(BaseScraper):
         query: Optional[str] = None,
         max_pages: Optional[int] = None,
         fetch_detail: Optional[bool] = None,
+        price_max: Optional[int] = None,
     ) -> Iterator[Listing]:
         max_pages = max_pages if max_pages is not None else config.max_pages
         seen: set[str] = set()
         for page in range(max_pages):
             url = self.search_url.format(offset=page * _PER_PAGE, limit=_PER_PAGE)
             body = dict(self._search_body)
+            body["properties"] = dict(self._search_body["properties"])
             if query:
                 body["query"] = query
+            if price_max:
+                body["properties"]["price_to"] = price_max
             try:
                 resp = self.http.post(url, content=json.dumps(body),
                                       headers=self._search_headers)
