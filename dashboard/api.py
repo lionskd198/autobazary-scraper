@@ -221,10 +221,13 @@ def get_stats() -> JSONResponse:
 
 
 def _serialize(row: Any) -> dict:
+    import datetime, decimal
     d = dict(row)
-    for k in ("first_seen", "last_seen"):
-        if k in d and d[k] is not None:
-            d[k] = d[k].isoformat()
+    for k, v in d.items():
+        if isinstance(v, (datetime.datetime, datetime.date)):
+            d[k] = v.isoformat()
+        elif isinstance(v, decimal.Decimal):
+            d[k] = float(v)
     for k in ("price_changes", "days_listed"):
         if k in d and d[k] is not None:
             d[k] = int(d[k])

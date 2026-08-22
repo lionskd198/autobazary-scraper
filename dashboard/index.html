@@ -642,10 +642,16 @@ async function toggleFav(id, btn) {
 
 async function showFavorites() {
   document.getElementById('cards').innerHTML = '<div class="loading"><i class="ti ti-loader-2"></i>Načítám oblíbené…</div>';
-  const items = await loadFavorites();
+  document.getElementById('pagination').innerHTML = '';
+  const r = await fetch('/api/favorites');
+  const d = await r.json();
+  const items = d.items || [];
+  // Aktualizuj favorites set
+  favorites = new Set(items.map(i => i.id));
+  const cnt = document.getElementById('fav-count');
+  cnt.textContent = favorites.size > 0 ? '(' + favorites.size + ')' : '';
   document.getElementById('shown-count').textContent = items.length;
   document.getElementById('total-count').textContent = items.length;
-  document.getElementById('pagination').innerHTML = '';
   if (!items.length) {
     document.getElementById('cards').innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="ti ti-heart"></i><br>Žádné oblíbené inzeráty.<br>Klikni na srdíčko u inzerátu.</div>';
     return;
@@ -657,19 +663,17 @@ function switchTab(tab) {
   currentTab = tab;
   document.getElementById('tab-all').classList.toggle('active', tab === 'all');
   document.getElementById('tab-fav').classList.toggle('active', tab === 'favorites');
-  const searchWrap = document.querySelector('.search-wrap');
-  const sidebar = document.querySelector('.sidebar');
+  offset = 0;
   if (tab === 'favorites') {
     showFavorites();
   } else {
-    offset = 0;
     loadListings();
   }
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 loadStats();
-loadFavorites();
+loadFavorites();  // načte jen IDs do `favorites` setu, nepřepíná tab
 loadListings();
 </script>
 </body>
