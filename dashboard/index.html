@@ -137,6 +137,14 @@ a{color:var(--accent);text-decoration:none}
 .search-input:focus{outline:none;border-color:var(--accent)}
 .search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;pointer-events:none}
 
+/* Favorites */
+.fav-btn{background:none;border:none;cursor:pointer;padding:4px;color:var(--text3);font-size:18px;line-height:1;transition:all .15s;border-radius:6px}
+.fav-btn:hover{color:var(--red);background:rgba(239,68,68,.1)}
+.fav-btn.active{color:var(--red)}
+.tab-row{display:flex;gap:6px;margin-bottom:.25rem}
+.tab-btn{font-size:12px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--sans);transition:all .15s}
+.tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
 /* Divider */
 .div{height:1px;background:var(--border)}
 </style>
@@ -280,6 +288,12 @@ a{color:var(--accent);text-decoration:none}
       <div class="stat-val" id="s-scraped" style="font-size:13px;padding-top:4px">—</div>
       <div class="stat-sub" id="s-sources">—</div>
     </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-row">
+    <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">Všechny inzeráty</button>
+    <button class="tab-btn" id="tab-fav" onclick="switchTab('favorites')"><i class="ti ti-heart"></i> Oblíbené <span id="fav-count"></span></button>
   </div>
 
   <!-- Search -->
@@ -445,11 +459,16 @@ function renderCards(items) {
           ${agePill ? `<span class="age-pill ${ageCls}">${agePill}</span>` : ""}
           ${updatedHtml}
         </div>
-        <a class="btn-link" href="${c.url}" target="_blank" rel="noopener">
-          <i class="ti ti-external-link"></i> Zobrazit
-        </a>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="fav-btn \${favorites.has(c.id) ? 'active' : ''}" onclick="toggleFav(\${c.id}, this)" title="Přidat do oblíbených">
+            <i class="ti \${favorites.has(c.id) ? 'ti-heart-filled' : 'ti-heart'}"></i>
+          </button>
+          <a class="btn-link" href="${c.url}" target="_blank" rel="noopener">
+            <i class="ti ti-external-link"></i> Zobrazit
+          </a>
+        </div>
       </div>
-    </div>`;
+    </div>\`;
   }).join("");
 }
 
@@ -576,8 +595,68 @@ document.getElementById("search-input").addEventListener("input", e => {
   debouncedLoad();
 });
 
+// ── Favorites ────────────────────────────────────────────────────────────────
+let favorites = new Set();
+let currentTab = 'all';
+
+async function loadFavorites() {
+  const r = await fetch('/api/favorites');
+  const d = await r.json();
+  favorites = new Set(d.items.map(i => i.id));
+  const cnt = document.getElementById('fav-count');
+  cnt.textContent = favorites.size > 0 ? `(${favorites.size})` : '';
+  return d.items;
+}
+
+async function toggleFav(id, btn) {
+  const isActive = btn.classList.contains('active');
+  const icon = btn.querySelector('i');
+  if (isActive) {
+    await fetch(`/api/favorites/${id}`, {method: 'DELETE'});
+    favorites.delete(id);
+    btn.classList.remove('active');
+    icon.className = 'ti ti-heart';
+    if (currentTab === 'favorites') { offset = 0; showFavorites(); }
+  } else {
+    await fetch(`/api/favorites/${id}`, {method: 'POST'});
+    favorites.add(id);
+    btn.classList.add('active');
+    icon.className = 'ti ti-heart-filled';
+  }
+  const cnt = document.getElementById('fav-count');
+  cnt.textContent = favorites.size > 0 ? `(${favorites.size})` : '';
+}
+
+async function showFavorites() {
+  document.getElementById('cards').innerHTML = '<div class="loading"><i class="ti ti-loader-2"></i>Načítám oblíbené…</div>';
+  const items = await loadFavorites();
+  document.getElementById('shown-count').textContent = items.length;
+  document.getElementById('total-count').textContent = items.length;
+  document.getElementById('pagination').innerHTML = '';
+  if (!items.length) {
+    document.getElementById('cards').innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="ti ti-heart"></i><br>Žádné oblíbené inzeráty.<br>Klikni na srdíčko u inzerátu.</div>';
+    return;
+  }
+  renderCards(items);
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-all').classList.toggle('active', tab === 'all');
+  document.getElementById('tab-fav').classList.toggle('active', tab === 'favorites');
+  const searchWrap = document.querySelector('.search-wrap');
+  const sidebar = document.querySelector('.sidebar');
+  if (tab === 'favorites') {
+    showFavorites();
+  } else {
+    offset = 0;
+    loadListings();
+  }
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 loadStats();
+loadFavorites();
 loadListings();
 </script>
 </body>

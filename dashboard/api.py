@@ -7,7 +7,8 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Query, Request
+from fastapi import FastAPI, Query, Request, Response, Cookie
+import uuid
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import create_engine, text
 
@@ -23,6 +24,35 @@ if _raw_url.startswith("postgresql://") or _raw_url.startswith("postgres://"):
     _raw_url = _raw_url.replace("://", "+psycopg://", 1)
 
 engine = create_engine(_raw_url, pool_pre_ping=True, future=True)
+
+# ── Favorites tabulka ────────────────────────────────────────────────────────
+from sqlalchemy import Table, Column, BigInteger, Integer, String, DateTime, ForeignKey, MetaData as SAMeta, func as safunc, UniqueConstraint
+
+_fav_meta = SAMeta()
+
+def _get_favorites_table(schema: str):
+    if not hasattr(_get_favorites_table, "_cache"):
+        _get_favorites_table._cache = {}
+    if schema not in _get_favorites_table._cache:
+        _get_favorites_table._cache[schema] = Table(
+            "favorites", _fav_meta,
+            Column("id", BigInteger, primary_key=True, autoincrement=True),
+            Column("session_id", String(64), nullable=False, index=True),
+            Column("listing_id", BigInteger, nullable=False, index=True),
+            Column("created_at", DateTime(timezone=True), server_default=safunc.now()),
+            UniqueConstraint("session_id", "listing_id", name="uq_fav_session_listing"),
+            schema=schema,
+        )
+    return _get_favorites_table._cache[schema]
+
+
+def _init_favorites(schema: str) -> None:
+    fav = _get_favorites_table(schema)
+    try:
+        fav.create(engine, checkfirst=True)
+    except Exception as e:
+        log.warning("Favorites table init: %s", e)
+
 
 def _detect_schema() -> str:
     """Najde schéma kde leží tabulka listings."""
@@ -41,6 +71,11 @@ try:
 except Exception as e:
     log.warning("Schema detection failed: %s, using autobazary", e)
     SCH = "autobazary"
+
+try:
+    _init_favorites(SCH)
+except Exception as e:
+    log.warning("Favorites init failed: %s", e)
 
 app = FastAPI(title="Autobazary dashboard API", docs_url="/api/docs")
 
@@ -194,6 +229,72 @@ def _serialize(row: Any) -> dict:
         if k in d and d[k] is not None:
             d[k] = int(d[k])
     return d
+
+
+# ── Favorites endpointy ──────────────────────────────────────────────────────
+
+SESSION_COOKIE = "ab_session"
+
+def _get_session(session_id: str | None) -> str:
+    return session_id if session_id else str(uuid.uuid4())
+
+
+@app.get("/api/favorites")
+def get_favorites(
+    response: Response,
+    session_id: str | None = Cookie(default=None, alias=SESSION_COOKIE),
+) -> JSONResponse:
+    sid = _get_session(session_id)
+    response.set_cookie(SESSION_COOKIE, sid, max_age=365*24*3600, httponly=True, samesite="lax")
+
+    sql = text(f"""
+        SELECT l.id, l.source, l.url, l.title, l.brand, l.model, l.year,
+               l.price, l.mileage_km, l.fuel, l.body_type, l.location,
+               l.seller_type, l.first_seen, l.last_seen,
+               EXTRACT(DAY FROM NOW() - l.first_seen)::int AS days_listed,
+               f.created_at AS favorited_at
+        FROM {SCH}.favorites f
+        JOIN {SCH}.listings l ON l.id = f.listing_id
+        WHERE f.session_id = :sid
+        ORDER BY f.created_at DESC
+    """)
+    with engine.connect() as conn:
+        rows = conn.execute(sql, {"sid": sid}).mappings().all()
+    return JSONResponse({"items": [_serialize(r) for r in rows]})
+
+
+@app.post("/api/favorites/{listing_id}")
+def add_favorite(
+    listing_id: int,
+    response: Response,
+    session_id: str | None = Cookie(default=None, alias=SESSION_COOKIE),
+) -> JSONResponse:
+    sid = _get_session(session_id)
+    response.set_cookie(SESSION_COOKIE, sid, max_age=365*24*3600, httponly=True, samesite="lax")
+    fav = _get_favorites_table(SCH)
+    try:
+        with engine.begin() as conn:
+            conn.execute(fav.insert().values(session_id=sid, listing_id=listing_id))
+    except Exception:
+        pass  # unique constraint = už existuje
+    return JSONResponse({"ok": True, "listing_id": listing_id})
+
+
+@app.delete("/api/favorites/{listing_id}")
+def remove_favorite(
+    listing_id: int,
+    response: Response,
+    session_id: str | None = Cookie(default=None, alias=SESSION_COOKIE),
+) -> JSONResponse:
+    sid = _get_session(session_id)
+    response.set_cookie(SESSION_COOKIE, sid, max_age=365*24*3600, httponly=True, samesite="lax")
+    fav = _get_favorites_table(SCH)
+    with engine.begin() as conn:
+        conn.execute(fav.delete().where(
+            fav.c.session_id == sid,
+            fav.c.listing_id == listing_id,
+        ))
+    return JSONResponse({"ok": True, "listing_id": listing_id})
 
 
 # ── Statický HTML dashboard ───────────────────────────────────────────────────
