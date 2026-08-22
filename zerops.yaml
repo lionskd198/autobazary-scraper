@@ -6,6 +6,7 @@ zerops:
         - requirements.txt
       deployFiles:
         - autobazary/
+        - dashboard/
         - migrate_add_price_history.py
         - requirements.txt
 
@@ -19,17 +20,13 @@ zerops:
           pip install --no-cache-dir -r /home/zerops/requirements.txt
 
       initCommands:
-        - |
-          cd /var/www
-          python3 -c "
-          import os
-          url = os.environ.get('DATABASE_URL', 'NOT SET')
-          # skryj heslo
-          import re
-          safe = re.sub(r':([^:@]+)@', ':***@', url)
-          print('DATABASE_URL =', safe)
-          "
-          python migrate_add_price_history.py
+        - cd /var/www && python migrate_add_price_history.py
+
+      start: cd /var/www && uvicorn dashboard.api:app --host 0.0.0.0 --port 8000
+
+      ports:
+        - port: 8000
+          httpSupport: true
 
       crontab:
         - command: cd /var/www && python -m autobazary.run scrape --sources all --pages 5

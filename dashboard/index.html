@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Autobazary — přehled inzerátů</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root {
+  --bg:       #0E1117;
+  --surface:  #161B27;
+  --surface2: #1E2535;
+  --border:   #2A3347;
+  --border2:  #3B4A63;
+  --accent:   #3B82F6;
+  --accent-d: #1D4ED8;
+  --green:    #22C55E;
+  --yellow:   #F59E0B;
+  --red:      #EF4444;
+  --text:     #E2E8F0;
+  --text2:    #94A3B8;
+  --text3:    #64748B;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Inter', sans-serif;
+  --r:        8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+/* Layout */
+.layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{padding:1.25rem;display:flex;flex-direction:column;gap:1rem;overflow:hidden}
+
+/* Sidebar header */
+.sb-logo{display:flex;align-items:center;gap:8px;padding-bottom:1rem;border-bottom:1px solid var(--border)}
+.sb-logo i{font-size:22px;color:var(--accent)}
+.sb-logo span{font-size:15px;font-weight:600;letter-spacing:-.3px}
+
+/* Filter groups */
+.fg{display:flex;flex-direction:column;gap:6px}
+.fg-label{font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:5px}
+.fg-label i{font-size:13px}
+
+/* Range sliders */
+.range-wrap{display:flex;flex-direction:column;gap:4px}
+.range-inputs{display:flex;gap:6px;align-items:center}
+.range-inputs input[type=range]{flex:1;accent-color:var(--accent);height:4px}
+.range-val{font-family:var(--mono);font-size:11px;color:var(--text2);white-space:nowrap}
+
+/* Toggle chips */
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:12px;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s;font-family:var(--sans)}
+.chip:hover{border-color:var(--accent);color:var(--text)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.feat.on{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green)}
+
+/* Stats row */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem 1rem}
+.stat-label{font-size:11px;color:var(--text3);margin-bottom:5px;display:flex;align-items:center;gap:4px}
+.stat-val{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--text);line-height:1}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.result-info{font-size:13px;color:var(--text2)}
+.result-info strong{color:var(--text);font-family:var(--mono)}
+.sort-sel{font-size:12px;padding:5px 10px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--sans)}
+
+/* Cards grid */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;display:flex;flex-direction:column;gap:8px;border-left:3px solid var(--border)}
+.card.fresh{border-left-color:var(--green)}
+.card.aging{border-left-color:var(--yellow)}
+.card.stale{border-left-color:var(--red)}
+
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.card-title{font-size:14px;font-weight:500;line-height:1.3}
+.src-badge{font-size:10px;padding:2px 7px;border-radius:10px;border:1px solid var(--border2);color:var(--text3);white-space:nowrap;flex-shrink:0}
+.src-sauto{color:#F59E0B;border-color:rgba(245,158,11,.3)}
+.src-tipcars{color:#22C55E;border-color:rgba(34,197,94,.3)}
+.src-bazos{color:#A78BFA;border-color:rgba(167,139,250,.3)}
+
+.price-row{display:flex;align-items:baseline;gap:8px}
+.price{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--accent)}
+.price-prev{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:3px}
+.price-down{color:var(--green)}
+.price-up{color:var(--red)}
+
+.attrs{display:flex;flex-wrap:wrap;gap:4px}
+.attr{font-size:11px;color:var(--text2);background:var(--surface2);padding:2px 8px;border-radius:10px;display:flex;align-items:center;gap:3px}
+.attr i{font-size:12px;color:var(--text3)}
+
+.feats{display:flex;flex-wrap:wrap;gap:4px}
+.feat-tag{font-size:11px;padding:2px 8px;border-radius:10px}
+.feat-yes{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.feat-no{background:var(--surface2);color:var(--text3);text-decoration:line-through}
+
+.card-footer{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border)}
+.age-badge{font-size:11px;display:flex;flex-direction:column;gap:2px}
+.age-pill{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:11px}
+.age-fresh{background:rgba(34,197,94,.12);color:var(--green)}
+.age-aging{background:rgba(245,158,11,.12);color:var(--yellow)}
+.age-stale{background:rgba(239,68,68,.12);color:var(--red)}
+.age-updated{font-size:10px;color:var(--text3)}
+
+.btn-link{font-size:12px;padding:5px 10px;border-radius:var(--r);border:1px solid rgba(59,130,246,.4);background:rgba(59,130,246,.08);color:var(--accent);display:flex;align-items:center;gap:4px;white-space:nowrap;transition:all .15s}
+.btn-link:hover{background:rgba(59,130,246,.2)}
+
+/* Loading / empty */
+.loading{text-align:center;padding:3rem;color:var(--text3)}
+.loading i{font-size:32px;display:block;margin-bottom:8px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:3rem;color:var(--text3)}
+.empty i{font-size:32px;display:block;margin-bottom:8px}
+
+/* Pagination */
+.pagination{display:flex;gap:6px;justify-content:center;padding-top:.5rem}
+.page-btn{padding:5px 12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px;font-family:var(--sans)}
+.page-btn:hover{border-color:var(--accent);color:var(--text)}
+.page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.page-btn:disabled{opacity:.35;cursor:default}
+
+/* Divider */
+.div{height:1px;background:var(--border)}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR FILTRY -->
+<aside class="sidebar">
+  <div class="sb-logo">
+    <i class="ti ti-car"></i>
+    <span>Autobazary</span>
+  </div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-cash"></i> Cena (Kč)</div>
+    <div class="range-wrap">
+      <div class="range-inputs">
+        <input type="range" id="price-min" min="0" max="2000000" step="10000" value="0">
+        <span>—</span>
+        <input type="range" id="price-max" min="0" max="2000000" step="10000" value="2000000">
+      </div>
+      <div class="range-val" id="price-lbl">0 – 2 000 000 Kč</div>
+    </div>
+  </div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-road"></i> Nájezd (km)</div>
+    <div class="range-wrap">
+      <div class="range-inputs">
+        <input type="range" id="km-min" min="0" max="400000" step="5000" value="0">
+        <span>—</span>
+        <input type="range" id="km-max" min="0" max="400000" step="5000" value="400000">
+      </div>
+      <div class="range-val" id="km-lbl">0 – 400 000 km</div>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-car"></i> Karoserie</div>
+    <div class="chips" id="body-chips">
+      <button class="chip on" data-val="">Vše</button>
+      <button class="chip" data-val="sedan">Sedan</button>
+      <button class="chip" data-val="kombi">Kombi</button>
+      <button class="chip" data-val="suv">SUV</button>
+      <button class="chip" data-val="hatchback">Hatchback</button>
+      <button class="chip" data-val="minivan">Minivan</button>
+      <button class="chip" data-val="kabriolet">Kabriolet</button>
+    </div>
+  </div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-gas-station"></i> Palivo</div>
+    <div class="chips" id="fuel-chips">
+      <button class="chip on" data-val="">Vše</button>
+      <button class="chip" data-val="benzín">Benzín</button>
+      <button class="chip" data-val="nafta">Nafta</button>
+      <button class="chip" data-val="hybrid">Hybrid</button>
+      <button class="chip" data-val="elektro">Elektro</button>
+      <button class="chip" data-val="lpg">LPG</button>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-settings-2"></i> Výbava</div>
+    <div class="chips" id="feat-chips">
+      <button class="chip feat" data-val="tempomat">Tempomat</button>
+      <button class="chip feat" data-val="vyhrivane_sedacky">Vyhř. sedačky</button>
+      <button class="chip feat" data-val="panorama">Panorama</button>
+      <button class="chip feat" data-val="kamera">Kamera</button>
+      <button class="chip feat" data-val="navigace">Navigace</button>
+      <button class="chip feat" data-val="android_auto">Android Auto</button>
+    </div>
+  </div>
+
+  <div class="div"></div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-globe"></i> Portál</div>
+    <div class="chips" id="source-chips">
+      <button class="chip on" data-val="sauto">Sauto</button>
+      <button class="chip on" data-val="tipcars">TipCars</button>
+      <button class="chip on" data-val="bazos">Bazoš</button>
+    </div>
+  </div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-user"></i> Prodejce</div>
+    <div class="chips" id="seller-chips">
+      <button class="chip on" data-val="">Vše</button>
+      <button class="chip" data-val="dealer">Autobazar</button>
+      <button class="chip" data-val="private">Soukromník</button>
+    </div>
+  </div>
+
+  <div class="fg">
+    <div class="fg-label"><i class="ti ti-clock"></i> Stáří inzerátu</div>
+    <div class="chips" id="age-chips">
+      <button class="chip on" data-val="">Vše</button>
+      <button class="chip" data-val="fresh">Nové (≤7 dní)</button>
+      <button class="chip" data-val="aging">Střední</button>
+      <button class="chip" data-val="stale">Staré (30+ dní)</button>
+      <button class="chip" data-val="updated">Aktualizované</button>
+    </div>
+  </div>
+</aside>
+
+<!-- HLAVNÍ OBSAH -->
+<main class="main">
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label"><i class="ti ti-list"></i> Celkem</div>
+      <div class="stat-val" id="s-total">—</div>
+      <div class="stat-sub">inzerátů</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label"><i class="ti ti-cash"></i> Průměrná cena</div>
+      <div class="stat-val" id="s-avg">—</div>
+      <div class="stat-sub">Kč</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label"><i class="ti ti-sparkles" style="color:var(--green)"></i> Čerstvé</div>
+      <div class="stat-val" id="s-fresh">—</div>
+      <div class="stat-sub">přidáno za 7 dní</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label"><i class="ti ti-refresh"></i> Naposledy scrapováno</div>
+      <div class="stat-val" id="s-scraped" style="font-size:13px;padding-top:4px">—</div>
+      <div class="stat-sub" id="s-sources">—</div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="result-info">Zobrazeno <strong id="shown-count">0</strong> z <strong id="total-count">0</strong> inzerátů</div>
+    <select class="sort-sel" id="sort-sel">
+      <option value="last_seen_desc">Nejnovější</option>
+      <option value="first_seen_desc">Nejdříve přidané</option>
+      <option value="price_asc">Cena: nejlevnější</option>
+      <option value="price_desc">Cena: nejdražší</option>
+      <option value="km_asc">Nájezd: nejméně</option>
+      <option value="year_desc">Rok: nejnovější</option>
+    </select>
+  </div>
+
+  <!-- Cards -->
+  <div class="cards" id="cards">
+    <div class="loading"><i class="ti ti-loader-2"></i>Načítám inzeráty…</div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" id="pagination"></div>
+</main>
+</div>
+
+<script>
+const LIMIT = 40;
+let offset = 0;
+let totalItems = 0;
+
+const state = {
+  priceMin: 0, priceMax: 2000000,
+  kmMin: 0, kmMax: 400000,
+  body: "", fuel: "", seller: "", age: "",
+  sources: new Set(["sauto","tipcars","bazos"]),
+  features: new Set(),
+  sort: "last_seen_desc",
+};
+
+function fmtN(n) {
+  if (n == null) return "—";
+  return Math.round(n).toLocaleString("cs-CZ");
+}
+function fmtDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("cs-CZ", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function daysLabel(days) {
+  if (days == null) return "";
+  if (days <= 7) return ["age-fresh", `<i class='ti ti-sparkles'></i> ${days === 0 ? "Dnes" : days + " dní"}`];
+  if (days <= 29) return ["age-aging", `<i class='ti ti-clock'></i> ${days} dní`];
+  return ["age-stale", `<i class='ti ti-hourglass-low'></i> ${days} dní`];
+}
+
+// ── Načtení statistik ────────────────────────────────────────────────────────
+async function loadStats() {
+  const r = await fetch("/api/stats");
+  const d = await r.json();
+  document.getElementById("s-total").textContent = fmtN(d.total);
+  document.getElementById("s-avg").textContent = d.avg_price ? fmtN(d.avg_price) : "—";
+  document.getElementById("s-fresh").textContent = fmtN(d.fresh);
+  document.getElementById("s-scraped").textContent = fmtDate(d.last_scraped);
+  document.getElementById("s-sources").textContent = `Sauto ${fmtN(d.sauto)} · TipCars ${fmtN(d.tipcars)} · Bazoš ${fmtN(d.bazos)}`;
+}
+
+// ── Sestavení URL parametrů ──────────────────────────────────────────────────
+function buildParams() {
+  const p = new URLSearchParams();
+  if (state.priceMin > 0) p.set("price_min", state.priceMin);
+  if (state.priceMax < 2000000) p.set("price_max", state.priceMax);
+  if (state.kmMin > 0) p.set("km_min", state.kmMin);
+  if (state.kmMax < 400000) p.set("km_max", state.kmMax);
+  if (state.body) p.set("body_type", state.body);
+  if (state.fuel) p.set("fuel", state.fuel);
+  if (state.seller) p.set("seller_type", state.seller);
+  if (state.age) p.set("age", state.age);
+  if (state.sources.size < 3) p.set("source", [...state.sources].join(","));
+  p.set("sort", state.sort);
+  p.set("limit", LIMIT);
+  p.set("offset", offset);
+  return p;
+}
+
+// ── Načtení inzerátů ─────────────────────────────────────────────────────────
+async function loadListings() {
+  document.getElementById("cards").innerHTML = '<div class="loading"><i class="ti ti-loader-2"></i>Načítám…</div>';
+  const r = await fetch("/api/listings?" + buildParams());
+  const d = await r.json();
+  totalItems = d.total;
+  document.getElementById("shown-count").textContent = fmtN(Math.min(offset + LIMIT, d.total));
+  document.getElementById("total-count").textContent = fmtN(d.total);
+  renderCards(d.items);
+  renderPagination(d.total);
+}
+
+// ── Render karet ─────────────────────────────────────────────────────────────
+const FEAT_LABELS = {
+  tempomat: "Tempomat",
+  vyhrivane_sedacky: "Vyhř. sedačky",
+  panorama: "Panorama",
+  kamera: "Kamera",
+  navigace: "Navigace",
+  android_auto: "Android Auto",
+};
+
+function renderCards(items) {
+  const grid = document.getElementById("cards");
+  if (!items.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="ti ti-mood-sad"></i>Žádné inzeráty neodpovídají filtrům</div>';
+    return;
+  }
+
+  grid.innerHTML = items.map(c => {
+    const days = c.days_listed;
+    const [ageCls, agePill] = daysLabel(days) || ["", ""];
+    const cardCls = days <= 7 ? "fresh" : days <= 29 ? "aging" : "stale";
+
+    // Cena a změna
+    let priceHtml = `<span class="price">${c.price ? fmtN(c.price) + " Kč" : "Cena dohodou"}</span>`;
+    if (c.prev_price != null && c.prev_price !== c.price) {
+      const dir = c.prev_price > c.price ? "price-down" : "price-up";
+      const icon = c.prev_price > c.price ? "ti-trending-down" : "ti-trending-up";
+      priceHtml += `<span class="price-prev ${dir}"><i class="ti ${icon}"></i> bylo ${fmtN(c.prev_price)} Kč</span>`;
+    }
+
+    // Výbava — zobraz jen aktivně filtrované featury
+    const featHtml = [...state.features].map(f => {
+      // Tady bychom potřebovali data z DB — schovat pokud nemáme
+      return `<span class="feat-tag feat-yes">${FEAT_LABELS[f] || f}</span>`;
+    }).join("");
+
+    const updatedHtml = c.was_updated
+      ? `<div class="age-updated"><i class="ti ti-refresh"></i> aktualizováno</div>`
+      : "";
+
+    return `<div class="card ${cardCls}">
+      <div class="card-top">
+        <div class="card-title">${c.title || c.brand + " " + c.model}</div>
+        <span class="src-badge src-${c.source}">${c.source}</span>
+      </div>
+      <div class="price-row">${priceHtml}</div>
+      <div class="attrs">
+        ${c.year ? `<span class="attr"><i class="ti ti-calendar"></i>${c.year}</span>` : ""}
+        ${c.mileage_km != null ? `<span class="attr"><i class="ti ti-road"></i>${fmtN(c.mileage_km)} km</span>` : ""}
+        ${c.fuel ? `<span class="attr"><i class="ti ti-gas-station"></i>${c.fuel}</span>` : ""}
+        ${c.power_kw ? `<span class="attr"><i class="ti ti-bolt"></i>${c.power_kw} kW</span>` : ""}
+        ${c.body_type ? `<span class="attr"><i class="ti ti-car"></i>${c.body_type}</span>` : ""}
+        ${c.location ? `<span class="attr"><i class="ti ti-map-pin"></i>${c.location}</span>` : ""}
+        ${c.seller_type ? `<span class="attr">${c.seller_type === "dealer" ? "Bazár" : "Soukromník"}</span>` : ""}
+      </div>
+      ${featHtml ? `<div class="feats">${featHtml}</div>` : ""}
+      <div class="card-footer">
+        <div class="age-badge">
+          ${agePill ? `<span class="age-pill ${ageCls}">${agePill}</span>` : ""}
+          ${updatedHtml}
+        </div>
+        <a class="btn-link" href="${c.url}" target="_blank" rel="noopener">
+          <i class="ti ti-external-link"></i> Zobrazit
+        </a>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Paginace ─────────────────────────────────────────────────────────────────
+function renderPagination(total) {
+  const pages = Math.ceil(total / LIMIT);
+  const current = Math.floor(offset / LIMIT);
+  const pg = document.getElementById("pagination");
+  if (pages <= 1) { pg.innerHTML = ""; return; }
+  let html = `<button class="page-btn" ${current === 0 ? "disabled" : ""} onclick="goPage(${current-1})"><i class="ti ti-chevron-left"></i></button>`;
+  const start = Math.max(0, current - 2);
+  const end = Math.min(pages - 1, current + 2);
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i === current ? "active" : ""}" onclick="goPage(${i})">${i + 1}</button>`;
+  }
+  html += `<button class="page-btn" ${current >= pages - 1 ? "disabled" : ""} onclick="goPage(${current+1})"><i class="ti ti-chevron-right"></i></button>`;
+  pg.innerHTML = html;
+}
+
+function goPage(page) {
+  offset = page * LIMIT;
+  loadListings();
+  window.scrollTo(0, 0);
+}
+
+// ── Filtry ───────────────────────────────────────────────────────────────────
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+const debouncedLoad = debounce(() => { offset = 0; loadListings(); }, 400);
+
+// Single-select chips
+function setupSingle(containerId, stateKey) {
+  document.getElementById(containerId).addEventListener("click", e => {
+    const btn = e.target.closest(".chip");
+    if (!btn) return;
+    document.querySelectorAll(`#${containerId} .chip`).forEach(b => b.classList.remove("on"));
+    btn.classList.add("on");
+    state[stateKey] = btn.dataset.val;
+    offset = 0; loadListings();
+  });
+}
+setupSingle("body-chips", "body");
+setupSingle("fuel-chips", "fuel");
+setupSingle("seller-chips", "seller");
+setupSingle("age-chips", "age");
+
+// Multi-select sources
+document.getElementById("source-chips").addEventListener("click", e => {
+  const btn = e.target.closest(".chip");
+  if (!btn) return;
+  btn.classList.toggle("on");
+  const val = btn.dataset.val;
+  if (btn.classList.contains("on")) state.sources.add(val);
+  else state.sources.delete(val);
+  if (state.sources.size === 0) { btn.classList.add("on"); state.sources.add(val); return; }
+  offset = 0; loadListings();
+});
+
+// Features
+document.getElementById("feat-chips").addEventListener("click", e => {
+  const btn = e.target.closest(".chip");
+  if (!btn) return;
+  btn.classList.toggle("on");
+  const f = btn.dataset.val;
+  if (btn.classList.contains("on")) state.features.add(f);
+  else state.features.delete(f);
+  offset = 0; loadListings();
+});
+
+// Range sliders
+["price-min","price-max"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    const mn = +document.getElementById("price-min").value;
+    const mx = +document.getElementById("price-max").value;
+    state.priceMin = Math.min(mn, mx);
+    state.priceMax = Math.max(mn, mx);
+    document.getElementById("price-lbl").textContent = `${fmtN(state.priceMin)} – ${fmtN(state.priceMax)} Kč`;
+    debouncedLoad();
+  });
+});
+["km-min","km-max"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    const mn = +document.getElementById("km-min").value;
+    const mx = +document.getElementById("km-max").value;
+    state.kmMin = Math.min(mn, mx);
+    state.kmMax = Math.max(mn, mx);
+    document.getElementById("km-lbl").textContent = `${fmtN(state.kmMin)} – ${fmtN(state.kmMax)} km`;
+    debouncedLoad();
+  });
+});
+
+// Sort
+document.getElementById("sort-sel").addEventListener("change", e => {
+  state.sort = e.target.value;
+  offset = 0; loadListings();
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadStats();
+loadListings();
+</script>
+</body>
+</html>
