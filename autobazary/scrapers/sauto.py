@@ -36,16 +36,19 @@ class SautoScraper(BaseScraper):
     name = "sauto"
     base_url = "https://www.sauto.cz"
 
-    def iter_page_urls(self, query: Optional[str], max_pages: int) -> Iterator[str]:
+    def iter_page_urls(self, query: Optional[str], max_pages: int,
+                       price_max: Optional[int] = None) -> Iterator[str]:
         for page in range(1, max_pages + 1):
             params = [
                 "category_id=838",
-                "condition_seek=1",   # 1 = ojeté i nové; uprav dle potřeby
+                "condition_seek=1",
                 f"per_page={_PER_PAGE}",
                 f"page={page}",
             ]
             if query:
                 params.append(f"query={query}")
+            if price_max:
+                params.append(f"price_to={price_max}")
             yield f"{API_URL}?{'&'.join(params)}"
 
     def parse_list_page(self, html: str) -> Iterator[Listing]:

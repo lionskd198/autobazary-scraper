@@ -31,7 +31,7 @@ class BazosScraper(BaseScraper):
     name = "bazos"
     base_url = "https://auto.bazos.cz"
 
-    def iter_page_urls(self, query: Optional[str], max_pages: int) -> Iterator[str]:
+    def iter_page_urls(self, query: Optional[str], max_pages: int, **kwargs) -> Iterator[str]:
         # Bazoš stránkuje parametrem ?crz=<offset> po 20 inzerátech.
         for page in range(max_pages):
             offset = page * 20

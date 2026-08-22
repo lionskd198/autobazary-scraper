@@ -29,5 +29,5 @@ zerops:
           httpSupport: true
 
       crontab:
-        - command: cd /var/www && python -m autobazary.run scrape --sources all --pages 5
+        - command: cd /var/www && python -m autobazary.run scrape --sources all --pages 50 --price-max 250000
           timing: "0 0,4,8,12,16,20 * * *"

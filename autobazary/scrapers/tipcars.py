@@ -65,7 +65,7 @@ class TipCarsScraper(BaseScraper):
 
     # iter_page_urls je zde jen kvůli `dump` příkazu (GET vrátí prázdný shell,
     # skutečná data tečou přes POST v ``scrape``).
-    def iter_page_urls(self, query: Optional[str], max_pages: int) -> Iterator[str]:
+    def iter_page_urls(self, query: Optional[str], max_pages: int, **kwargs) -> Iterator[str]:
         for page in range(max_pages):
             yield self.search_url.format(offset=page * _PER_PAGE, limit=_PER_PAGE)
 
