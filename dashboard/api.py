@@ -7,8 +7,7 @@ import traceback
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Query, Request, Response, Cookie
-import uuid
+from fastapi import FastAPI, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import create_engine, text
 
@@ -236,20 +235,13 @@ def _serialize(row: Any) -> dict:
 
 # ── Favorites endpointy ──────────────────────────────────────────────────────
 
-SESSION_COOKIE = "ab_session"
-
-def _get_session(session_id: str | None) -> str:
-    return session_id if session_id else str(uuid.uuid4())
+# Pevné USER_ID z env proměnné — nastav v Zerops GUI jako DASHBOARD_USER_ID
+USER_ID = os.environ.get("DASHBOARD_USER_ID", "default")
+log.info("Favorites user ID: %s", USER_ID)
 
 
 @app.get("/api/favorites")
-def get_favorites(
-    response: Response,
-    session_id: str | None = Cookie(default=None, alias=SESSION_COOKIE),
-) -> JSONResponse:
-    sid = _get_session(session_id)
-    response.set_cookie(SESSION_COOKIE, sid, max_age=365*24*3600, httponly=True, samesite="lax")
-
+def get_favorites() -> JSONResponse:
     sql = text(f"""
         SELECT l.id, l.source, l.url, l.title, l.brand, l.model, l.year,
                l.price, l.mileage_km, l.fuel, l.body_type, l.location,
@@ -258,43 +250,31 @@ def get_favorites(
                f.created_at AS favorited_at
         FROM {SCH}.favorites f
         JOIN {SCH}.listings l ON l.id = f.listing_id
-        WHERE f.session_id = :sid
+        WHERE f.session_id = :uid
         ORDER BY f.created_at DESC
     """)
     with engine.connect() as conn:
-        rows = conn.execute(sql, {"sid": sid}).mappings().all()
+        rows = conn.execute(sql, {"uid": USER_ID}).mappings().all()
     return JSONResponse({"items": [_serialize(r) for r in rows]})
 
 
 @app.post("/api/favorites/{listing_id}")
-def add_favorite(
-    listing_id: int,
-    response: Response,
-    session_id: str | None = Cookie(default=None, alias=SESSION_COOKIE),
-) -> JSONResponse:
-    sid = _get_session(session_id)
-    response.set_cookie(SESSION_COOKIE, sid, max_age=365*24*3600, httponly=True, samesite="lax")
+def add_favorite(listing_id: int) -> JSONResponse:
     fav = _get_favorites_table(SCH)
     try:
         with engine.begin() as conn:
-            conn.execute(fav.insert().values(session_id=sid, listing_id=listing_id))
+            conn.execute(fav.insert().values(session_id=USER_ID, listing_id=listing_id))
     except Exception:
         pass  # unique constraint = už existuje
     return JSONResponse({"ok": True, "listing_id": listing_id})
 
 
 @app.delete("/api/favorites/{listing_id}")
-def remove_favorite(
-    listing_id: int,
-    response: Response,
-    session_id: str | None = Cookie(default=None, alias=SESSION_COOKIE),
-) -> JSONResponse:
-    sid = _get_session(session_id)
-    response.set_cookie(SESSION_COOKIE, sid, max_age=365*24*3600, httponly=True, samesite="lax")
+def remove_favorite(listing_id: int) -> JSONResponse:
     fav = _get_favorites_table(SCH)
     with engine.begin() as conn:
         conn.execute(fav.delete().where(
-            fav.c.session_id == sid,
+            fav.c.session_id == USER_ID,
             fav.c.listing_id == listing_id,
         ))
     return JSONResponse({"ok": True, "listing_id": listing_id})
