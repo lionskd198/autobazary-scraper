@@ -33,4 +33,4 @@ zerops:
 
       crontab:
         - command: cd /var/www && python -m autobazary.run scrape --sources all --pages 5
-          timing: "0 * * * *"
+          timing: "0 */4 * * *"
