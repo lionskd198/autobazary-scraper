@@ -541,48 +541,59 @@ document.getElementById("feat-chips").addEventListener("click", e => {
   offset = 0; loadListings();
 });
 
-// Range sliders
-// ── Cena: slider <-> number input synchronizace ──────────────────────────────
-function syncPrice() {
-  const mn = Math.min(+document.getElementById("price-min").value, +document.getElementById("price-max").value);
-  const mx = Math.max(+document.getElementById("price-min").value, +document.getElementById("price-max").value);
-  state.priceMin = mn; state.priceMax = mx;
-  document.getElementById("price-min-num").value = mn;
-  document.getElementById("price-max-num").value = mx;
-  debouncedLoad();
-}
-["price-min","price-max"].forEach(id => document.getElementById(id).addEventListener("input", syncPrice));
-document.getElementById("price-min-num").addEventListener("input", e => {
-  const v = Math.max(0, Math.min(+e.target.value || 0, 2000000));
-  document.getElementById("price-min").value = v;
-  syncPrice();
-});
-document.getElementById("price-max-num").addEventListener("input", e => {
-  const v = Math.max(0, Math.min(+e.target.value || 2000000, 2000000));
-  document.getElementById("price-max").value = v;
-  syncPrice();
+// ── Cena: slider -> input (jednosměrně), input -> search při blur/enter ─────
+["price-min","price-max"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    const mn = +document.getElementById("price-min").value;
+    const mx = +document.getElementById("price-max").value;
+    state.priceMin = Math.min(mn, mx);
+    state.priceMax = Math.max(mn, mx);
+    document.getElementById("price-min-num").value = state.priceMin;
+    document.getElementById("price-max-num").value = state.priceMax;
+    debouncedLoad();
+  });
 });
 
-// ── Nájezd: slider <-> number input synchronizace ─────────────────────────────
-function syncKm() {
-  const mn = Math.min(+document.getElementById("km-min").value, +document.getElementById("km-max").value);
-  const mx = Math.max(+document.getElementById("km-min").value, +document.getElementById("km-max").value);
-  state.kmMin = mn; state.kmMax = mx;
-  document.getElementById("km-min-num").value = mn;
-  document.getElementById("km-max-num").value = mx;
-  debouncedLoad();
+function applyPriceInput() {
+  const mn = parseInt(document.getElementById("price-min-num").value) || 0;
+  const mx = parseInt(document.getElementById("price-max-num").value) || 2000000;
+  state.priceMin = Math.min(mn, mx);
+  state.priceMax = Math.max(mn, mx);
+  document.getElementById("price-min").value = state.priceMin;
+  document.getElementById("price-max").value = state.priceMax;
+  offset = 0; loadListings();
 }
-["km-min","km-max"].forEach(id => document.getElementById(id).addEventListener("input", syncKm));
-document.getElementById("km-min-num").addEventListener("input", e => {
-  const v = Math.max(0, Math.min(+e.target.value || 0, 400000));
-  document.getElementById("km-min").value = v;
-  syncKm();
+document.getElementById("price-min-num").addEventListener("blur", applyPriceInput);
+document.getElementById("price-max-num").addEventListener("blur", applyPriceInput);
+document.getElementById("price-min-num").addEventListener("keydown", e => { if (e.key === "Enter") applyPriceInput(); });
+document.getElementById("price-max-num").addEventListener("keydown", e => { if (e.key === "Enter") applyPriceInput(); });
+
+// ── Nájezd: slider -> input (jednosměrně), input -> search při blur/enter ────
+["km-min","km-max"].forEach(id => {
+  document.getElementById(id).addEventListener("input", () => {
+    const mn = +document.getElementById("km-min").value;
+    const mx = +document.getElementById("km-max").value;
+    state.kmMin = Math.min(mn, mx);
+    state.kmMax = Math.max(mn, mx);
+    document.getElementById("km-min-num").value = state.kmMin;
+    document.getElementById("km-max-num").value = state.kmMax;
+    debouncedLoad();
+  });
 });
-document.getElementById("km-max-num").addEventListener("input", e => {
-  const v = Math.max(0, Math.min(+e.target.value || 400000, 400000));
-  document.getElementById("km-max").value = v;
-  syncKm();
-});
+
+function applyKmInput() {
+  const mn = parseInt(document.getElementById("km-min-num").value) || 0;
+  const mx = parseInt(document.getElementById("km-max-num").value) || 400000;
+  state.kmMin = Math.min(mn, mx);
+  state.kmMax = Math.max(mn, mx);
+  document.getElementById("km-min").value = state.kmMin;
+  document.getElementById("km-max").value = state.kmMax;
+  offset = 0; loadListings();
+}
+document.getElementById("km-min-num").addEventListener("blur", applyKmInput);
+document.getElementById("km-max-num").addEventListener("blur", applyKmInput);
+document.getElementById("km-min-num").addEventListener("keydown", e => { if (e.key === "Enter") applyKmInput(); });
+document.getElementById("km-max-num").addEventListener("keydown", e => { if (e.key === "Enter") applyKmInput(); });
 
 // Sort
 document.getElementById("sort-sel").addEventListener("change", e => {
