@@ -74,6 +74,7 @@ class TipCarsScraper(BaseScraper):
         query: Optional[str] = None,
         max_pages: Optional[int] = None,
         fetch_detail: Optional[bool] = None,
+        price_min: Optional[int] = None,
         price_max: Optional[int] = None,
     ) -> Iterator[Listing]:
         max_pages = max_pages if max_pages is not None else config.max_pages
@@ -84,6 +85,8 @@ class TipCarsScraper(BaseScraper):
             body["properties"] = dict(self._search_body["properties"])
             if query:
                 body["query"] = query
+            if price_min:
+                body["properties"]["price_from"] = price_min
             if price_max:
                 body["properties"]["price_to"] = price_max
             try:

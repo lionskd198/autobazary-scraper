@@ -54,13 +54,14 @@ class BaseScraper(ABC):
         query: Optional[str] = None,
         max_pages: Optional[int] = None,
         fetch_detail: Optional[bool] = None,
+        price_min: Optional[int] = None,
         price_max: Optional[int] = None,
     ) -> Iterator[Listing]:
         max_pages = max_pages if max_pages is not None else config.max_pages
         fetch_detail = fetch_detail if fetch_detail is not None else config.fetch_detail
 
         seen: set[str] = set()
-        for page_url in self.iter_page_urls(query, max_pages, price_max=price_max):
+        for page_url in self.iter_page_urls(query, max_pages, price_min=price_min, price_max=price_max):
             try:
                 html = self.http.get_text(page_url)
             except Exception as exc:  # noqa: BLE001 – jedna vadná stránka neshodí běh

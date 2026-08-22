@@ -58,6 +58,7 @@ def cmd_scrape(args) -> int:
                 query=args.query,
                 max_pages=args.pages,
                 fetch_detail=args.detail or None,
+                price_min=args.price_min if hasattr(args, "price_min") else None,
                 price_max=args.price_max if hasattr(args, "price_max") else None,
             ):
                 batch.append(listing)
@@ -145,6 +146,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--query", default=None, help="fulltext dotaz (kde portál podporuje)")
     sp.add_argument("--pages", type=int, default=None, help="max stránek na portál")
     sp.add_argument("--detail", action="store_true", help="stahovat i detailní stránky")
+    sp.add_argument("--price-min", type=int, default=None, dest="price_min",
+                    help="minimální cena v Kč (kde portál podporuje)")
     sp.add_argument("--price-max", type=int, default=None, dest="price_max",
                     help="maximální cena v Kč (kde portál podporuje)")
     sp.set_defaults(func=cmd_scrape)

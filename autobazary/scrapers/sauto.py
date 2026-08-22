@@ -37,7 +37,8 @@ class SautoScraper(BaseScraper):
     base_url = "https://www.sauto.cz"
 
     def iter_page_urls(self, query: Optional[str], max_pages: int,
-                       price_max: Optional[int] = None) -> Iterator[str]:
+                       price_min: Optional[int] = None,
+                       price_max: Optional[int] = None, **kwargs) -> Iterator[str]:
         for page in range(1, max_pages + 1):
             params = [
                 "category_id=838",
@@ -47,6 +48,8 @@ class SautoScraper(BaseScraper):
             ]
             if query:
                 params.append(f"query={query}")
+            if price_min:
+                params.append(f"price_from={price_min}")
             if price_max:
                 params.append(f"price_to={price_max}")
             yield f"{API_URL}?{'&'.join(params)}"

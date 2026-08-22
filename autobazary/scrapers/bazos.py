@@ -31,15 +31,22 @@ class BazosScraper(BaseScraper):
     name = "bazos"
     base_url = "https://auto.bazos.cz"
 
-    def iter_page_urls(self, query: Optional[str], max_pages: int, **kwargs) -> Iterator[str]:
+    def iter_page_urls(self, query: Optional[str], max_pages: int,
+                       price_min: Optional[int] = None,
+                       price_max: Optional[int] = None, **kwargs) -> Iterator[str]:
         # Bazoš stránkuje parametrem ?crz=<offset> po 20 inzerátech.
+        # Cenový filtr: cenaod=<min>&cenado=<max>
+        price_params = ""
+        if price_min:
+            price_params += f"&cenaod={price_min}"
+        if price_max:
+            price_params += f"&cenado={price_max}"
         for page in range(max_pages):
             offset = page * 20
             if query:
-                # fulltext hledání: /search.php?hledat=<q>&...
-                yield f"{self.base_url}/search.php?hledat={query}&rubriky=auto&crz={offset}"
+                yield f"{self.base_url}/search.php?hledat={query}&rubriky=auto&crz={offset}{price_params}"
             else:
-                yield f"{self.base_url}/?crz={offset}"
+                yield f"{self.base_url}/?crz={offset}{price_params}"
 
     def parse_list_page(self, html: str) -> Iterator[Listing]:
         soup = BeautifulSoup(html, "lxml")
