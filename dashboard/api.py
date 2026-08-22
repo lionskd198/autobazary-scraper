@@ -80,6 +80,10 @@ def get_listings(
     elif age == "updated":
         conditions.append("EXTRACT(EPOCH FROM (last_seen - first_seen)) > 172800")  # >2 dny rozdíl
 
+    if q:
+        conditions.append("title ILIKE :q")
+        params["q"] = f"%{q}%"
+
     sort_map = {
         "price_asc": "price ASC NULLS LAST",
         "price_desc": "price DESC NULLS LAST",

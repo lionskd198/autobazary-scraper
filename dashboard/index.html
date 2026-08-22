@@ -31,8 +31,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14
 a{color:var(--accent);text-decoration:none}
 
 /* Layout */
-.layout{display:grid;grid-template-columns:260px 1fr;min-height:100vh}
-.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem;position:sticky;top:0;height:100vh;overflow-y:auto}
+.layout{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:1.25rem 1.5rem;display:flex;flex-direction:column;gap:1rem;position:sticky;top:0;height:100vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
 .main{padding:1.25rem;display:flex;flex-direction:column;gap:1rem;overflow:hidden}
 
 /* Sidebar header */
@@ -125,6 +125,18 @@ a{color:var(--accent);text-decoration:none}
 .page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .page-btn:disabled{opacity:.35;cursor:default}
 
+/* Number inputs */
+.num-inputs{display:flex;gap:6px;align-items:center;margin-top:4px}
+.num-input{width:100%;padding:4px 8px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--mono);font-size:12px}
+.num-input:focus{outline:none;border-color:var(--accent)}
+.num-sep{color:var(--text3);flex-shrink:0}
+
+/* Search */
+.search-wrap{position:relative;margin-bottom:.25rem}
+.search-input{width:100%;padding:8px 12px 8px 34px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-family:var(--sans);font-size:13px}
+.search-input:focus{outline:none;border-color:var(--accent)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;pointer-events:none}
+
 /* Divider */
 .div{height:1px;background:var(--border)}
 </style>
@@ -147,7 +159,11 @@ a{color:var(--accent);text-decoration:none}
         <span>—</span>
         <input type="range" id="price-max" min="0" max="2000000" step="10000" value="2000000">
       </div>
-      <div class="range-val" id="price-lbl">0 – 2 000 000 Kč</div>
+      <div class="num-inputs">
+        <input class="num-input" id="price-min-num" type="number" min="0" max="2000000" step="10000" value="0" placeholder="Od">
+        <span class="num-sep">—</span>
+        <input class="num-input" id="price-max-num" type="number" min="0" max="2000000" step="10000" value="2000000" placeholder="Do">
+      </div>
     </div>
   </div>
 
@@ -159,7 +175,11 @@ a{color:var(--accent);text-decoration:none}
         <span>—</span>
         <input type="range" id="km-max" min="0" max="400000" step="5000" value="400000">
       </div>
-      <div class="range-val" id="km-lbl">0 – 400 000 km</div>
+      <div class="num-inputs">
+        <input class="num-input" id="km-min-num" type="number" min="0" max="400000" step="5000" value="0" placeholder="Od">
+        <span class="num-sep">—</span>
+        <input class="num-input" id="km-max-num" type="number" min="0" max="400000" step="5000" value="400000" placeholder="Do">
+      </div>
     </div>
   </div>
 
@@ -262,6 +282,12 @@ a{color:var(--accent);text-decoration:none}
     </div>
   </div>
 
+  <!-- Search -->
+  <div class="search-wrap">
+    <i class="ti ti-search search-icon"></i>
+    <input class="search-input" id="search-input" type="text" placeholder="Hledat podle názvu, značky, modelu…">
+  </div>
+
   <!-- Toolbar -->
   <div class="toolbar">
     <div class="result-info">Zobrazeno <strong id="shown-count">0</strong> z <strong id="total-count">0</strong> inzerátů</div>
@@ -297,6 +323,7 @@ const state = {
   sources: new Set(["sauto","tipcars","bazos"]),
   features: new Set(),
   sort: "last_seen_desc",
+  search: "",
 };
 
 function fmtN(n) {
@@ -338,6 +365,7 @@ function buildParams() {
   if (state.seller) p.set("seller_type", state.seller);
   if (state.age) p.set("age", state.age);
   if (state.sources.size < 3) p.set("source", [...state.sources].join(","));
+  if (state.search) p.set("q", state.search);
   p.set("sort", state.sort);
   p.set("limit", LIMIT);
   p.set("offset", offset);
@@ -493,31 +521,59 @@ document.getElementById("feat-chips").addEventListener("click", e => {
 });
 
 // Range sliders
-["price-min","price-max"].forEach(id => {
-  document.getElementById(id).addEventListener("input", () => {
-    const mn = +document.getElementById("price-min").value;
-    const mx = +document.getElementById("price-max").value;
-    state.priceMin = Math.min(mn, mx);
-    state.priceMax = Math.max(mn, mx);
-    document.getElementById("price-lbl").textContent = `${fmtN(state.priceMin)} – ${fmtN(state.priceMax)} Kč`;
-    debouncedLoad();
-  });
+// ── Cena: slider <-> number input synchronizace ──────────────────────────────
+function syncPrice() {
+  const mn = Math.min(+document.getElementById("price-min").value, +document.getElementById("price-max").value);
+  const mx = Math.max(+document.getElementById("price-min").value, +document.getElementById("price-max").value);
+  state.priceMin = mn; state.priceMax = mx;
+  document.getElementById("price-min-num").value = mn;
+  document.getElementById("price-max-num").value = mx;
+  debouncedLoad();
+}
+["price-min","price-max"].forEach(id => document.getElementById(id).addEventListener("input", syncPrice));
+document.getElementById("price-min-num").addEventListener("input", e => {
+  const v = Math.max(0, Math.min(+e.target.value || 0, 2000000));
+  document.getElementById("price-min").value = v;
+  syncPrice();
 });
-["km-min","km-max"].forEach(id => {
-  document.getElementById(id).addEventListener("input", () => {
-    const mn = +document.getElementById("km-min").value;
-    const mx = +document.getElementById("km-max").value;
-    state.kmMin = Math.min(mn, mx);
-    state.kmMax = Math.max(mn, mx);
-    document.getElementById("km-lbl").textContent = `${fmtN(state.kmMin)} – ${fmtN(state.kmMax)} km`;
-    debouncedLoad();
-  });
+document.getElementById("price-max-num").addEventListener("input", e => {
+  const v = Math.max(0, Math.min(+e.target.value || 2000000, 2000000));
+  document.getElementById("price-max").value = v;
+  syncPrice();
+});
+
+// ── Nájezd: slider <-> number input synchronizace ─────────────────────────────
+function syncKm() {
+  const mn = Math.min(+document.getElementById("km-min").value, +document.getElementById("km-max").value);
+  const mx = Math.max(+document.getElementById("km-min").value, +document.getElementById("km-max").value);
+  state.kmMin = mn; state.kmMax = mx;
+  document.getElementById("km-min-num").value = mn;
+  document.getElementById("km-max-num").value = mx;
+  debouncedLoad();
+}
+["km-min","km-max"].forEach(id => document.getElementById(id).addEventListener("input", syncKm));
+document.getElementById("km-min-num").addEventListener("input", e => {
+  const v = Math.max(0, Math.min(+e.target.value || 0, 400000));
+  document.getElementById("km-min").value = v;
+  syncKm();
+});
+document.getElementById("km-max-num").addEventListener("input", e => {
+  const v = Math.max(0, Math.min(+e.target.value || 400000, 400000));
+  document.getElementById("km-max").value = v;
+  syncKm();
 });
 
 // Sort
 document.getElementById("sort-sel").addEventListener("change", e => {
   state.sort = e.target.value;
   offset = 0; loadListings();
+});
+
+// ── Search ───────────────────────────────────────────────────────────────────
+document.getElementById("search-input").addEventListener("input", e => {
+  state.search = e.target.value.trim();
+  offset = 0;
+  debouncedLoad();
 });
 
 // ── Init ─────────────────────────────────────────────────────────────────────
