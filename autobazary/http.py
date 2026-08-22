@@ -48,7 +48,10 @@ class HttpClient:
             headers={
                 "User-Agent": config.user_agent,
                 "Accept-Language": "cs,sk;q=0.9,en;q=0.8",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
             },
             timeout=config.timeout,
             follow_redirects=True,

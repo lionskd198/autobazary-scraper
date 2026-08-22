@@ -51,7 +51,7 @@ class SautoScraper(BaseScraper):
             if price_min:
                 params.append(f"price_from={price_min}")
             if price_max:
-                params.append(f"price_to={price_max}")
+                params.append(f"price_max={price_max}")
             yield f"{API_URL}?{'&'.join(params)}"
 
     def parse_list_page(self, html: str) -> Iterator[Listing]:
